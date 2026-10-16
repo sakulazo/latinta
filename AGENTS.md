@@ -37,7 +37,16 @@ Each app can have its own nested `AGENTS.md`; agents read the nearest one in the
 ## Commands
 `package.json` scripts are the source of truth. Run from the repo root unless noted.
 
-### Development
+### Docker (dev con hot reload)
+Nada que instalar en el runtime salvo Docker. Levanta Postgres + backend + storefront:
+```bash
+docker compose up --build      # Admin: http://localhost:9000/app | Storefront: http://localhost:8000
+docker compose logs -f backend
+docker compose down            # parar (conserva la BD)   |   down -v para borrarla
+```
+`start.sh` (backend) corre migraciones, crea el admin si falta y publica la publishable key en el volumen `shared`; `start-storefront.sh` la consume. Los secretos/puertos se sobrescriben con un `.env` en la raíz (ver `.env.example`).
+
+### Development (local, sin Docker)
 ```bash
 pnpm dev                # all apps
 pnpm backend:dev        # backend only (http://localhost:9000, admin at /app)
@@ -63,8 +72,12 @@ pnpm exec medusa user -e admin@test.com -p supersecret
 ```
 
 ## Local prerequisites
-- **PostgreSQL** must be running before starting Medusa. This machine has no root/Docker, so PostgreSQL 17 runs as a plain user process (rootless) from `~/.local/pgsql` with data in `~/.local/share/latinta/pgdata`. Manage it with `./scripts/pg.sh {start|stop|status|log}`.
-  - Connection: `postgres://latinta@127.0.0.1:5432/latinta` (set as `DATABASE_URL` in `apps/backend/.env`).
+- **PostgreSQL** must be running before starting Medusa. Two supported flows:
+  - **Docker (recomendado):** `docker compose up` levanta Postgres 17 + backend + storefront. Nada se instala en el runtime.
+  - **Local rootless:** este equipo no tiene root/Docker, así que PostgreSQL 17 corre como proceso de usuario desde `~/.local/pgsql` con datos en `~/.local/share/latinta/pgdata`. Gestiónalo con `./scripts/pg.sh {start|stop|status|log}`.
+    - Conexión local: `postgres://latinta@127.0.0.1:5432/latinta` (`DATABASE_URL` en `apps/backend/.env`).
+    - Ojo: si usas ambos flujos a la vez, los puertos `5432` chocan; usa uno u otro.
+- **URL del backend en el storefront:** `NEXT_PUBLIC_MEDUSA_BACKEND_URL` es la del navegador; `MEDUSA_BACKEND_URL` (sin `NEXT_PUBLIC_`) es la interna para SSR/middleware. En Docker: `http://localhost:9000` y `http://backend:9000` respectivamente. No expongas la URL interna al cliente.
 - **Redis is not required.** The backend logs "redisUrl not found. A fake redis instance will be used" and uses in-memory cache/locking/event-bus. `REDIS_URL` in `.env` is unused by the default `medusa-config.ts`.
 - **Stripe test keys** (later, Fase 2): `STRIPE_API_KEY` / `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in the backend. Configure the webhook endpoint in Stripe for local dev.
 - Env files: `apps/backend/.env` and `apps/storefront/.env.local`. Templates: `apps/backend/.env.template` and `apps/storefront/.env.local` (keep keys documented there, never commit real `.env` files).

@@ -1,0 +1,123 @@
+# Latinta — desarrollo local con Docker (hot reload).
+#
+# Nada que instalar en el runtime: Postgres, Node, pnpm, Medusa y Next
+# viven en imagenes. Solo necesitas Docker (p. ej. Docker Desktop con
+# integracion WSL2).
+#
+#   docker compose up --build
+#
+# Admin:      http://localhost:9000/app   (admin@latinta.local / Latinta2026!)
+# Storefront: http://localhost:8000
+#
+# Nota: no se incluye Redis. Medusa v2 usa cache/locking/event-bus in-memory por
+# defecto y medusa-config.ts no lo referencia. Se añadira en la Fase 4 (workflows)
+# junto con los modulos @medusajs/*-redis y su configuracion.
+#
+# Los valores ${VAR:-default} se pueden sobreescribir desde un fichero .env en
+# la raiz del repo (ignorado por git).
+
+name: latinta
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: latinta_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-latinta}
+      POSTGRES_USER: ${POSTGRES_USER:-latinta}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-latinta}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-latinta} -d ${POSTGRES_DB:-latinta}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - latinta
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: latinta_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["sh", "./start.sh"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER:-latinta}:${POSTGRES_PASSWORD:-latinta}@postgres:5432/${POSTGRES_DB:-latinta}
+      # CORS: el navegador llega por los puertos publicados en el host.
+      STORE_CORS: ${STORE_CORS:-http://localhost:8000,https://docs.medusajs.com}
+      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:5173,http://localhost:9000,https://docs.medusajs.com}
+      AUTH_CORS: ${AUTH_CORS:-http://localhost:5173,http://localhost:9000,http://localhost:8000,https://docs.medusajs.com}
+      JWT_SECRET: ${JWT_SECRET:-supersecret}
+      COOKIE_SECRET: ${COOKIE_SECRET:-supersecret}
+      AUTH_MFA_ENCRYPTION_KEY: ${AUTH_MFA_ENCRYPTION_KEY:-}
+      MEDUSA_ADMIN_ONBOARDING_TYPE: nextjs
+      # Credenciales del admin que crea start.sh (idempotente).
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@latinta.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Latinta2026!}
+    ports:
+      - "${BACKEND_PORT:-9000}:9000"
+    volumes:
+      - .:/server
+      # Volumenes anonimos: conservan node_modules/.medusa de la imagen (no los pisa el bind mount).
+      - /server/node_modules
+      - /server/apps/backend/node_modules
+      - /server/apps/backend/.medusa
+      - shared:/shared
+    healthcheck:
+      test:
+        ["CMD", "node", "-e", "fetch('http://localhost:9000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    networks:
+      - latinta
+
+  storefront:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: latinta_storefront
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    entrypoint: ["sh", "./start-storefront.sh"]
+    environment:
+      NODE_ENV: development
+      # URL publica: la usa el navegador (puerto publicado en el host).
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://localhost:9000}
+      # URL interna: la usa el SSR y el middleware dentro de la red de compose.
+      MEDUSA_BACKEND_URL: http://backend:9000
+      # Si se deja vacia, start-storefront.sh lee la key generada por el backend.
+      NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+      NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-es}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:8000}
+    ports:
+      - "${STOREFRONT_PORT:-8000}:8000"
+    volumes:
+      - .:/server
+      - /server/node_modules
+      - /server/apps/storefront/node_modules
+      - /server/apps/storefront/.next
+      - shared:/shared
+    networks:
+      - latinta
+
+volumes:
+  postgres_data:
+  shared:
+
+networks:
+  latinta:
+    driver: bridge

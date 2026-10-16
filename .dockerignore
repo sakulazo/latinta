@@ -1,0 +1,33 @@
+# Keep the build context small. Runtime source comes from the bind mount in dev,
+# but these are never needed inside the image.
+
+.git
+.github
+
+# Dependencies and build output (installed/built inside the image)
+node_modules
+**/node_modules
+**/.next
+**/.medusa
+**/dist
+**/out
+.turbo
+
+# Local env files and secrets — never bake these into the image
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Docker / docs
+Dockerfile
+.dockerignore
+compose.yaml
+README.md
+ROADMAP.md
+CLAUDE.md
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
+*.log

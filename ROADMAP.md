@@ -37,6 +37,9 @@
     DB `latinta`, gestionado con `./scripts/pg.sh`. Se descartó docker-compose para dev local.
 - [x] `.env` por app + `.env.template` documentado; `.env`/`.env.local` gitignored
 - [x] Medusa: migraciones + seed inicial ejecutados; usuario admin creado
+- [x] Dockerización para dev (hot reload): `Dockerfile`, `compose.yaml` (Postgres 17 + backend + storefront),
+      `start.sh` (migra + crea admin + publica la publishable key) y `start-storefront.sh`.
+      Alternativa sin Docker manteniendo el setup rootless.
 - [x] Scripts raíz: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`
 - [ ] CI básico (GitHub Actions): lint + typecheck en PR (pendiente: requiere remoto en GitHub)
 

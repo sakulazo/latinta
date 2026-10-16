@@ -17,12 +17,44 @@ Las convenciones y comandos para agentes están en [AGENTS.md](./AGENTS.md).
 
 ## Requisitos
 
+**Con Docker (Opción A):** solo Docker (Docker Desktop con integración WSL2, o Docker Engine). Nada más.
+
+**Sin Docker (Opción B):**
 - Node.js >= 22.22 (probado con 24.x)
 - pnpm 11 (`packageManager: pnpm@11.18.0`)
 - PostgreSQL 17. En esta máquina corre **rootless** (sin root/Docker) desde `~/.local/pgsql`;
   los binarios de PostgreSQL se obtienen del paquete npm `@embedded-postgres/linux-x64`.
 
 ## Puesta en marcha
+
+### Opción A — Docker (nada que instalar en el runtime) · recomendada
+
+Solo necesitas Docker (p. ej. Docker Desktop en Windows con integración WSL2).
+Todo lo demás (Node, pnpm, Medusa, Next, Postgres) vive en contenedores.
+
+```bash
+docker compose up --build
+```
+
+- Admin Medusa: http://localhost:9000/app
+- Storefront: http://localhost:8000
+
+El backend aplica migraciones, crea el usuario admin y publica la publishable API
+key automáticamente; el storefront la consume al arrancar. Para sobrescribir
+valores (puertos, credenciales, secretos) copia `.env.example` → `.env`.
+
+```bash
+docker compose logs -f backend     # logs
+docker compose down                # parar (mantiene la BD)
+docker compose down -v             # parar y borrar la BD
+```
+
+> Si tienes el PostgreSQL rootless levantado (`./scripts/pg.sh status`), el puerto
+> 5432 choca con el contenedor. Páralo (`./scripts/pg.sh stop`) o cambia
+> `POSTGRES_PORT` en el `.env` de la raíz. La primera build tarda: instala todas
+> las dependencias dentro de la imagen.
+
+### Opción B — Local sin contenedores
 
 ```bash
 # 1. Dependencias

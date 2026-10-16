@@ -55,3 +55,9 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 **/.DS_Store
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Medusa build output
+**/.medusa
