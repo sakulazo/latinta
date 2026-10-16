@@ -1,0 +1,28 @@
+packages:
+  - "apps/**"
+  - "!apps/backend/.medusa/**"
+
+# pnpm 11+ (settings live in pnpm-workspace.yaml)
+overrides:
+  "@types/react": "19.0.5"
+  "@types/react-dom": "19.0.5"
+  tsconfig-paths: "^4.2.0"
+
+allowBuilds:
+  "@medusajs/telemetry": true
+  "@swc/core": true
+  esbuild: true
+  msgpackr-extract: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+# pnpm 10.x compatibility
+onlyBuiltDependencies:
+  - "@medusajs/telemetry"
+  - "@swc/core"
+  - esbuild
+  - msgpackr-extract
+  - protobufjs
+  - sharp
+  - unrs-resolver
