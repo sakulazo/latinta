@@ -52,7 +52,10 @@ services:
     entrypoint: ["sh", "./start.sh"]
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgres://${POSTGRES_USER:-latinta}:${POSTGRES_PASSWORD:-latinta}@postgres:5432/${POSTGRES_DB:-latinta}
+      # `sslmode=disable` es imprescindible: Medusa activa SSL por defecto cuando
+      # el host no es localhost/127.0.0.1, y `postgres:17-alpine` no habla SSL.
+      # Sin esto, las migraciones fallan con "connection timed out after 10 seconds".
+      DATABASE_URL: "postgres://${POSTGRES_USER:-latinta}:${POSTGRES_PASSWORD:-latinta}@postgres:5432/${POSTGRES_DB:-latinta}?sslmode=disable"
       # CORS: el navegador llega por los puertos publicados en el host.
       STORE_CORS: ${STORE_CORS:-http://localhost:8000,https://docs.medusajs.com}
       ADMIN_CORS: ${ADMIN_CORS:-http://localhost:5173,http://localhost:9000,https://docs.medusajs.com}
