@@ -7,7 +7,7 @@
 #   docker compose up --build
 #
 # Admin:      http://localhost:9000/app   (admin@latinta.local / Latinta2026!)
-# Storefront: http://localhost:8000
+# Storefront: http://localhost:8000        (override con STOREFRONT_PORT en .env)
 #
 # Nota: no se incluye Redis. Medusa v2 usa cache/locking/event-bus in-memory por
 # defecto y medusa-config.ts no lo referencia. Se añadira en la Fase 4 (workflows)
